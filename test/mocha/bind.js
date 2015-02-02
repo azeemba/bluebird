@@ -13,7 +13,7 @@ function timedThenableOf(value) {
 }
 
 function timedPromiseOf(value) {
-    return Promise.delay(value, 1);
+    return Promise.delay(1, value);
 }
 
 function immediatePromiseOf(value) {
@@ -766,6 +766,59 @@ describe("when using .bind", function() {
         });
     });
 
+    describe("With delay", function() {
+        describe("this should refer to the bound object", function() {
+            specify("after race with immediate values", function() {
+                Promise.resolve([1,2,3]).bind(THIS).delay(1).then(function(v){
+                    assert(v[0] === 1);
+                    assert(this === THIS);
+                });
+            });
+            specify("after race with eventual values", function() {
+                var d1 = Promise.defer();
+                var p1 = d1.promise;
+
+                var d2 = Promise.defer();
+                var p2 = d2.promise;
+
+                var d3 = Promise.defer();
+                var p3 = d3.promise;
+
+                setTimeout(function(){
+                    d1.fulfill(1);
+                    d2.fulfill(2);
+                    d3.fulfill(3);
+                }, 1);
+
+                return Promise.resolve([p1, p2, p3]).bind(THIS).delay(1).all().then(function(v){
+                    assert(v[0] === 1);
+                    assert(this === THIS);
+                });
+            });
+        });
+
+        describe("this should not refer to the bound object", function() {
+            specify("in the promises created within the handler", function() {
+                var d1 = Promise.defer();
+                var p1 = d1.promise;
+
+                setTimeout(function(){
+                    d1.fulfill(1);
+                }, 1);
+
+                return Promise.resolve([1,2,3]).delay(1).bind(THIS).delay(1).filter(function(){
+                    assert(this === THIS);
+                    return Promise.delay(1).then(function(){
+                        assert(this !== THIS);
+                        return 1;
+                    })
+                }).then(function(){
+                    assert(this === THIS);
+                });
+            });
+        });
+    });
+
     describe("With settle", function() {
         describe("this should refer to the bound object", function() {
             specify("after settle with immediate values", function() {
@@ -1005,7 +1058,7 @@ describe("Promised thisArg", function() {
     });
 
     specify("basic case, main promise first", function() {
-        var promise = Promise.delay(2, 1);
+        var promise = Promise.delay(1, 2);
         var thisPromise = promise.thenReturn(1);
         return promise.bind(thisPromise).then(function(val) {
             assert.strictEqual(+this, 1);
@@ -1029,7 +1082,7 @@ describe("Promised thisArg", function() {
     specify("both reject, main promise rejects first", function() {
         var e1 = new Error("first");
         var e2 = new Error("second");
-        var thisPromise = Promise.delay(1, 56).thenThrow(e1);
+        var thisPromise = Promise.delay(56, 1).thenThrow(e1);
         var promise = Promise.delay(2, 0).thenThrow(e2);
         return promise.bind(thisPromise).then(null, function(reason) {
             assert(this === defaultThis);
@@ -1065,7 +1118,7 @@ describe("Promised thisArg", function() {
     });
 
     specify("Immediate value waits for deferred this", function() {
-        var t = Promise.delay(THIS, 1);
+        var t = Promise.delay(1, THIS);
         var t2 = {};
         Promise.resolve(t2).bind(t).then(function(value) {
             assert.strictEqual(this, THIS);
@@ -1075,7 +1128,7 @@ describe("Promised thisArg", function() {
 
 
     specify("Immediate error waits for deferred this", function() {
-        var t = Promise.delay(THIS, 1);
+        var t = Promise.delay(1, THIS);
         var err = new Error();
         return Promise.reject(err).bind(t).then(assert.fail, function(e) {
             assert.strictEqual(this, THIS);
