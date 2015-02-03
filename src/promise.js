@@ -154,7 +154,7 @@ Promise.fromNode = function(fn, multiArgs) {
     var ret = new Promise(INTERNAL);
     var result = tryCatch(fn)(nodebackForPromise(ret, !!multiArgs));
     if (result === errorObj) {
-        ret._rejectCallback(result.e, true, true);
+        ret._rejectCallback(result.e, true);
     }
     return ret;
 };
@@ -424,7 +424,7 @@ Promise.prototype._proxyPromiseArray = function (promiseArray, index) {
 Promise.prototype._resolveCallback = function(value, shouldBind) {
     if (this._isFollowingOrFulfilledOrRejected()) return;
     if (value === this)
-        return this._rejectCallback(makeSelfResolutionError(), false, true);
+        return this._rejectCallback(makeSelfResolutionError(), false);
     var maybePromise = tryConvertToPromise(value, this);
     if (!(maybePromise instanceof Promise)) return this._fulfill(value);
 
@@ -447,11 +447,7 @@ Promise.prototype._resolveCallback = function(value, shouldBind) {
     }
 };
 
-Promise.prototype._rejectCallback =
-function(reason, synchronous, shouldNotMarkOriginatingFromRejection) {
-    if (!shouldNotMarkOriginatingFromRejection) {
-        util.markAsOriginatingFromRejection(reason);
-    }
+Promise.prototype._rejectCallback = function(reason, synchronous) {
     var trace = util.ensureErrorObject(reason);
     var hasStack = util.canAttachTrace(reason) &&
         typeof trace.stack === "string" && trace.stack.length > 0;
@@ -479,7 +475,7 @@ Promise.prototype._resolveFromResolver = function (resolver) {
 
     if (r !== undefined) {
         if (r === errorObj && promise !== null) {
-            promise._rejectCallback(r.e, true, true);
+            promise._rejectCallback(r.e, true);
             promise = null;
         } else if (config.warnings()) {
             this._warn("the Promise constructor ignores return values but " +
@@ -511,7 +507,7 @@ Promise.prototype._settlePromiseFromHandler = function (
 
     if (x === errorObj || x === promise) {
         var err = x === promise ? makeSelfResolutionError() : x.e;
-        promise._rejectCallback(err, false, true);
+        promise._rejectCallback(err, false);
     } else {
         if (x === undefined &&
             promisesCreatedDuringHandlerInvocation > 0 &&
