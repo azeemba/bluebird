@@ -453,7 +453,7 @@ Promise.prototype._rejectCallback = function(reason, synchronous) {
     var hasStack = canAttachTrace &&
         typeof trace.stack === "string" && trace.stack.length > 0;
     if (!canAttachTrace && debug.warnings()) {
-        var message = "A promise was rejected with a non-error: " +
+        var message = "a promise was rejected with a non-error: " +
             util.classString(reason);
         this._warn(message, true);
     }
