@@ -176,22 +176,6 @@ describe("when using .bind", function() {
         });
     });
 
-    describe("With uncancellable promises", function(){
-        specify("this should refer to the bound object", function() {
-            return Promise.resolve().bind(THIS).uncancellable().then(function(){
-                assert(this === THIS);
-            });
-        });
-    });
-
-    describe("With forked promises", function(){
-        specify("this should refer to the bound object", function() {
-            return Promise.resolve().bind(THIS).fork().then(function(){
-                assert(this === THIS);
-            });
-        });
-    });
-
     describe("With .get promises", function(){
         specify("this should refer to the bound object", function() {
             return Promise.resolve({key: "value"}).bind(THIS).get("key").then(function(val){
@@ -1090,33 +1074,6 @@ describe("Promised thisArg", function() {
         });
     });
 
-    specify("root promise is cancelled before binding resolves", function() {
-        var t = Promise.delay(1).then(function() {
-            ret.cancel(err);
-        }).delay(1).thenReturn(THIS);
-        var ret = new Promise(function() {}).cancellable().bind(t);
-        var err = new Error();
-        return ret.then(assert.fail, function(e) {
-            assert.strictEqual(t.value(), THIS);
-            assert.strictEqual(e, err);
-            assert.strictEqual(this, THIS);
-        });
-    });
-
-    specify("returned promise is cancelled before binding resolves", function() {
-        var t = Promise.delay(1).then(function() {
-            ret.cancel(err);
-        }).delay(1).thenReturn(THIS);
-        var ret = new Promise(function() {}).bind(t).cancellable();
-        var err = new Error();
-
-        return ret.then(assert.fail, function(e) {
-            assert.strictEqual(t.value(), THIS);
-            assert.strictEqual(e, err);
-            assert.strictEqual(this, THIS);
-        });
-    });
-
     specify("Immediate value waits for deferred this", function() {
         var t = Promise.delay(1, THIS);
         var t2 = {};
@@ -1133,32 +1090,6 @@ describe("Promised thisArg", function() {
         return Promise.reject(err).bind(t).then(assert.fail, function(e) {
             assert.strictEqual(this, THIS);
             assert.strictEqual(err, e);
-        });
-    });
-
-
-    specify("static promise is cancelled before binding resolves", function() {
-        var t = Promise.delay(1).then(function() {
-            promise.cancel(err);
-        }).delay(1).thenReturn(THIS);
-        var promise = Promise.bind(t, new Promise(function(){})).cancellable();
-        var err = new Error();
-
-        return promise.then(assert.fail, function(e) {
-            assert.strictEqual(t.value(), THIS);
-            assert.strictEqual(e, err);
-            assert.strictEqual(this, THIS);
-        });
-    });
-
-    specify("main promise is cancelled before binding rejects", function() {
-        var t = Promise.delay(1).then(function() {
-            ret.cancel(err);
-        }).delay(1).thenThrow(new Error());
-        var ret = new Promise(function() {}).cancellable().bind(t);
-        var err = new Error();
-        return ret.then(assert.fail, function(e) {
-            assert.strictEqual(e, err);
         });
     });
 

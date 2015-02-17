@@ -1,6 +1,5 @@
 "use strict";
 module.exports = function(Promise, INTERNAL, tryConvertToPromise) {
-var ASSERT = require("./assert.js");
 
 function returnThis() { return this.value; }
 function throwThis() { throw this.reason; }
@@ -18,16 +17,15 @@ Promise.prototype.bind = function (thisArg) {
             thisArg = maybePromise.value();
         } else if (maybePromise.isRejected()) {
             return Promise.reject(maybePromise.reason());
+        } else if (maybePromise.isCancelled()) {
+            return maybePromise.then();
         } else {
             var ret = this.then();
-            var parent = ret;
+            ret._attachCancellationCallback(maybePromise);
             ret = ret._then(awaitBindingThenResolve,
                             awaitBindingThenReject,
                             null, maybePromise, undefined);
             maybePromise._then(setBinding, ret._reject, null, ret, null);
-            // In case ret is set to cancellable in future, parent must be
-            // set to cancellable as well.
-            if (!ret._cancellable()) ret._setPendingCancellationParent(parent);
             return ret;
         }
     }
@@ -38,26 +36,6 @@ Promise.prototype.bind = function (thisArg) {
 
 Promise.bind = function (thisArg, value) {
     return Promise.resolve(value).bind(thisArg);
-};
-
-Promise.prototype._setPendingCancellationParent = function(parent) {
-    ASSERT(this.isPending());
-    ASSERT(parent.isPending());
-    ASSERT(!this._cancellable());
-    ASSERT(!parent._cancellable());
-    ASSERT(parent instanceof Promise);
-    this._settledValue = parent;
-};
-
-Promise.prototype._pendingCancellationParent = function() {
-    if (this.isPending() && this._settledValue !== undefined) {
-        ASSERT(this._settledValue instanceof Promise);
-        var ret = this._settledValue;
-        ASSERT(!ret._cancellable());
-        ret.cancellable();
-        this._settledValue = undefined;
-        return ret;
-    }
 };
 
 Promise.prototype._setIsBound = function () {
